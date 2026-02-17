@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOW Farbeditor</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+  .container { width: 100%; max-width: 800px; }
+  
+  .tools-row { display: flex; gap: 15px; background: #222; padding: 15px; border-radius: 8px; margin-bottom: 15px; align-items: center; border: 1px solid #444; flex-wrap: wrap; }
+  .picker-group { display: flex; align-items: center; gap: 10px; border-right: 1px solid #444; padding-right: 15px; }
+  
+  input[type="color"] { -webkit-appearance: none; border: 2px solid #fff; width: 45px; height: 45px; cursor: pointer; background: none; border-radius: 8px; padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
+  
+  .hex-input-group { display: flex; flex-direction: column; gap: 4px; }
+  .hex-input-group input { background: #333; border: 1px solid #555; color: #fff; padding: 5px; width: 130px; border-radius: 4px; font-family: monospace; text-align: center; font-size: 0.85em; }
+
+  .palette { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  
+  .eraser { 
+    width: 35px; height: 35px; border-radius: 4px; cursor: pointer; border: 2px solid #ff4444; 
+    background: #444; color: #ff4444; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2em; font-weight: bold; margin-right: 10px; transition: 0.1s;
+  }
+  .eraser.active { transform: scale(1.1); box-shadow: 0 0 10px #ff4444; border-color: #fff; background: #666; }
+
+  .palette-tile { width: 35px; height: 35px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.1s; }
+  .palette-tile.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+  .label-group { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; }
+  .label-small { font-size: 0.8em; color: #aaa; text-transform: uppercase; }
+
+  textarea { width: 100%; height: 140px; margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-family: monospace; font-size: 1.1em; box-sizing: border-box; resize: vertical; outline: none; }
+  
+  /* Vorschau Bereich - Hier war die Schriftart auf fett eingestellt */
+  .paint-area { background: #000; padding: 20px; border-radius: 8px; border: 1px solid #333; min-height: 80px; margin-bottom: 20px; font-size: 1.25em; line-height: 1.5; font-weight: normal; /* WICHTIG: Standard auf normal */ }
+  .word-chip { cursor: cell; transition: background 0.1s; border-radius: 2px; display: inline; }
+  .word-chip:hover { background: rgba(255,255,255,0.1); }
+
+  .stats { font-weight: bold; }
+  .bad { color: #ff5555; }
+  .ok { color: #66ff99; }
+  
+  .action-bar { display: flex; gap: 10px; width: 100%; }
+  .btn { background: #444; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
+  .btn:hover { background: #555; }
+  .btn-reset { background: #721c24; color: #f8d7da; border: 1px solid #f5c6cb; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2 style="text-align: center;">GOW Farbeditor</h2>
+
+  <div class="tools-row">
+    <div class="picker-group">
+      <input type="color" id="brushColor" value="#00ffff" oninput="selectBrush(this.value)">
+      <div class="hex-input-group">
+        <input type="text" id="hexManual" placeholder="Hexcode eingeben" oninput="handleManualHex(this.value)">
+        <button class="btn" onclick="manualToPalette()">MERKEN</button>
+      </div>
+    </div>
+    
+    <div class="palette">
+      <div id="eraserBtn" class="eraser" onclick="selectEraser()" title="Farbe zurücksetzen [-]">✕</div>
+      <div id="palette" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    </div>
+
+    <button class="btn" onclick="insertColorAtCursor()" style="background:#555; margin-left:auto;">CODE EINFÜGEN</button>
+  </div>
+
+  <div class="label-group">
+    <div class="label-small">1. Code-Eingabe (Farben, [b]fett[/b], [-] Reset)</div>
+    <div id="charCount" class="stats ok">0 / 243</div>
+  </div>
+  <textarea id="codeInput" oninput="handleCodeInput()" placeholder="Text hier rein..."></textarea>
+
+  <div class="label-group">
+    <div class="label-small">2. Pinsel-Editor</div>
+    <button class="btn btn-reset" onclick="resetAllColors()">KOMPLETT-RESET</button>
+  </div>
+  <div id="paintArea" class="paint-area"></div>
+
+  <div class="action-bar">
+    <button id="copyBtn" class="btn" style="flex: 1; padding: 15px; background: #28a745; font-size: 1.1em;" onclick="copyResult()">CODE KOPIEREN</button>
+  </div>
+</div>
+
+<script>
+const LIMIT = 243;
+const NONE = "NONE";
+let myPalette = JSON.parse(localStorage.getItem('gow_palette_v10')) || [];
+let activeBrush = "#00FFFF";
+let wordsData = [];
+
+function selectBrush(hex) {
+    activeBrush = hex.toUpperCase();
+    document.getElementById('brushColor').value = activeBrush;
+    document.getElementById('hexManual').value = activeBrush.replace('#','');
+    document.getElementById('eraserBtn').classList.remove('active');
+    renderPalette();
+}
+
+function selectEraser() {
+    activeBrush = NONE;
+    document.getElementById('eraserBtn').classList.add('active');
+    renderPalette();
+}
+
+function handleManualHex(val) {
+    let hex = val.trim();
+    if (hex.length >= 6) {
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (/^#[0-9A-F]{6}$/i.test(hex)) selectBrush(hex);
+    }
+}
+
+function manualToPalette() {
+    if(activeBrush !== NONE) addColorToPalette(activeBrush);
+}
+
+function addColorToPalette(hex) {
+    hex = hex.toUpperCase();
+    if(hex === NONE) return;
+    if(!myPalette.includes(hex)) {
+        myPalette.push(hex);
+        localStorage.setItem('gow_palette_v10', JSON.stringify(myPalette));
+        renderPalette();
+    }
+}
+
+function renderPalette() {
+    const container = document.getElementById('palette');
+    container.innerHTML = "";
+    myPalette.forEach(col => {
+        const tile = document.createElement('div');
+        tile.className = "palette-tile" + (activeBrush === col ? " active" : "");
+        tile.style.backgroundColor = col;
+        tile.onclick = () => selectBrush(col);
+        tile.oncontextmenu = (e) => {
+            e.preventDefault();
+            myPalette = myPalette.filter(c => c !== col);
+            localStorage.setItem('gow_palette_v10', JSON.stringify(myPalette));
+            renderPalette();
+        };
+        container.appendChild(tile);
+    });
+}
+
+function insertColorAtCursor() {
+    if(activeBrush === NONE) return;
+    const area = document.getElementById('codeInput');
+    const code = `[${activeBrush.replace('#', '')}]`;
+    const start = area.selectionStart;
+    const end = area.selectionEnd;
+    area.value = area.value.substring(0, start) + code + area.value.substring(end);
+    area.focus();
+    area.selectionStart = area.selectionEnd = start + code.length;
+    handleCodeInput();
+}
+
+function handleCodeInput() {
+    const input = document.getElementById('codeInput').value;
+    const found = input.match(/\[([0-9A-Fa-f]{6})\]/g);
+    if (found) found.forEach(match => addColorToPalette("#" + match.substring(1, 7)));
+
+    const parts = input.split(/(\[[0-9A-Fa-f]{6}\]|\[b\]|\[\/b\]|\[-\])/g);
+    let currentColor = NONE;
+    let isBold = false;
+    let newWordsData = [];
+
+    parts.forEach(part => {
+        if (!part) return;
+        
+        if (part.startsWith('[') && part.endsWith(']')) {
+            if (part === "[b]") isBold = true;
+            else if (part === "[/b]") isBold = false;
+            else if (part === "[-]") currentColor = NONE;
+            else if (part.length === 8) currentColor = "#" + part.substring(1, 7).toUpperCase();
+        } else {
+            const subParts = part.split(/(\s+)/);
+            subParts.forEach(word => {
+                if(word) {
+                    newWordsData.push({
+                        text: word,
+                        color: currentColor,
+                        bold: isBold,
+                        isSpace: /^\s+$/.test(word)
+                    });
+                }
+            });
+        }
+    });
+    wordsData = newWordsData;
+    renderPaintArea();
+    updateCounter();
+}
+
+function renderPaintArea() {
+    const container = document.getElementById('paintArea');
+    container.innerHTML = "";
+
+    wordsData.forEach((item, index) => {
+        const span = document.createElement('span');
+        span.textContent = item.text;
+        if(!item.isSpace) {
+            span.className = "word-chip";
+            span.style.color = (item.color === NONE) ? "inherit" : item.color;
+            // Hier wird die GOW-Fett-Logik visuell umgesetzt:
+            span.style.fontWeight = item.bold ? "900" : "400";
+            span.onclick = () => {
+                wordsData[index].color = activeBrush;
+                syncBackToCode();
+            };
+        } else {
+            span.style.whiteSpace = "pre-wrap";
+        }
+        container.appendChild(span);
+    });
+}
+
+function syncBackToCode() {
+    let newCode = "";
+    let lastColorInCode = NONE;
+    let currentBoldState = false;
+    
+    wordsData.forEach(item => {
+        if(item.isSpace) {
+            newCode += item.text;
+        } else {
+            if (item.bold !== currentBoldState) {
+                newCode += item.bold ? "[b]" : "[/b]";
+                currentBoldState = item.bold;
+            }
+            if (item.color !== lastColorInCode) {
+                newCode += (item.color === NONE) ? "[-]" : `[${item.color.replace('#','')}]`;
+                lastColorInCode = item.color;
+            }
+            newCode += item.text;
+        }
+    });
+    document.getElementById('codeInput').value = newCode;
+    updateCounter();
+    renderPaintArea();
+}
+
+function resetAllColors() {
+    if(confirm("Alle Formatierungen löschen?")) {
+        const area = document.getElementById('codeInput');
+        area.value = area.value.replace(/\[([0-9A-Fa-f]{6})\]|\[b\]|\[\/b\]|\[-\]/g, "");
+        handleCodeInput();
+    }
+}
+
+function updateCounter() {
+    const len = document.getElementById('codeInput').value.length;
+    const counter = document.getElementById('charCount');
+    counter.textContent = `${len} / ${LIMIT}`;
+    counter.className = "stats " + (len > LIMIT ? "bad" : "ok");
+}
+
+function copyResult() {
+    const text = document.getElementById('codeInput').value;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = "KOPIERT!";
+        setTimeout(() => btn.textContent = "CODE KOPIEREN", 2000);
+    });
+}
+
+function init() {
+    renderPalette();
+    handleCodeInput();
+}
+
+init();
+</script>
+</body>
+</html>
