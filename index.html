@@ -3,95 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GOW Farbeditor</title>
+<title>Gems of War Farbeditor</title>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; }
   .container { width: 100%; max-width: 800px; }
   
   .tools-row { display: flex; gap: 15px; background: #222; padding: 15px; border-radius: 8px; margin-bottom: 15px; align-items: center; border: 1px solid #444; flex-wrap: wrap; }
-  .picker-group { display: flex; align-items: center; gap: 10px; border-right: 1px solid #444; padding-right: 15px; }
+  .section-label { font-size: 0.75em; color: #888; margin-bottom: 8px; width: 100%; text-transform: uppercase; letter-spacing: 1px; }
   
+  .picker-group { display: flex; align-items: center; gap: 10px; border-right: 1px solid #444; padding-right: 15px; }
   input[type="color"] { -webkit-appearance: none; border: 2px solid #fff; width: 45px; height: 45px; cursor: pointer; background: none; border-radius: 8px; padding: 0; }
   input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
   
   .hex-input-group { display: flex; flex-direction: column; gap: 4px; }
-  .hex-input-group input { background: #333; border: 1px solid #555; color: #fff; padding: 5px; width: 130px; border-radius: 4px; font-family: monospace; text-align: center; font-size: 0.85em; }
+  .hex-input-group input { background: #333; border: 1px solid #555; color: #fff; padding: 5px; width: 110px; border-radius: 4px; font-family: monospace; text-align: center; font-size: 0.85em; }
 
+  .palette-area { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; }
   .palette { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .palette-tile { width: 35px; height: 35px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.1s; position: relative; }
+  .palette-tile.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
   
   .eraser { 
     width: 35px; height: 35px; border-radius: 4px; cursor: pointer; border: 2px solid #ff4444; 
     background: #444; color: #ff4444; display: flex; align-items: center; justify-content: center;
-    font-size: 1.2em; font-weight: bold; margin-right: 10px; transition: 0.1s;
+    font-size: 1.2em; font-weight: bold;
   }
   .eraser.active { transform: scale(1.1); box-shadow: 0 0 10px #ff4444; border-color: #fff; background: #666; }
 
-  .palette-tile { width: 35px; height: 35px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: 0.1s; }
-  .palette-tile.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+  .format-group { display: flex; gap: 8px; border-left: 1px solid #444; padding-left: 15px; }
 
-  .label-group { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; }
-  .label-small { font-size: 0.8em; color: #aaa; text-transform: uppercase; }
-
-  textarea { width: 100%; height: 140px; margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-family: monospace; font-size: 1.1em; box-sizing: border-box; resize: vertical; outline: none; }
-  
-  .paint-area { background: #000; padding: 20px; border-radius: 8px; border: 1px solid #333; min-height: 80px; margin-bottom: 20px; font-size: 1.25em; line-height: 1.5; font-weight: normal; }
-  .word-chip { cursor: cell; transition: background 0.1s; border-radius: 2px; display: inline; }
+  textarea { width: 100%; height: 120px; margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-family: monospace; font-size: 1.1em; box-sizing: border-box; resize: vertical; outline: none; }
+  .paint-area { background: #000; padding: 20px; border-radius: 8px; border: 1px solid #333; min-height: 80px; margin-bottom: 20px; font-size: 1.25em; line-height: 1.5; }
+  .word-chip { cursor: cell; border-radius: 2px; display: inline; }
   .word-chip:hover { background: rgba(255,255,255,0.1); }
 
   .stats { font-weight: bold; }
   .bad { color: #ff5555; }
   .ok { color: #66ff99; }
   
-  .action-bar { display: flex; gap: 10px; width: 100%; }
-  .btn { background: #444; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
+  .btn { background: #444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
   .btn:hover { background: #555; }
-  .btn-reset { background: #721c24; color: #f8d7da; border: 1px solid #f5c6cb; }
+  .btn-green { background: #28a745; }
+  .btn-format { font-family: serif; font-size: 1.1em; width: 35px; height: 35px; padding: 0; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h2 style="text-align: center;">GOW Farbeditor</h2>
+  <h2 style="text-align: center;">Gems of War Farbeditor</h2>
 
   <div class="tools-row">
     <div class="picker-group">
-      <input type="color" id="brushColor" value="#00ffff" oninput="selectBrush(this.value)">
+      <div style="display:flex; flex-direction:column; gap:5px;">
+        <div class="section-label">Picker</div>
+        <input type="color" id="brushColor" value="#FF7900" oninput="selectBrush(this.value)">
+      </div>
       <div class="hex-input-group">
-        <input type="text" id="hexManual" placeholder="Hexcode eingeben" oninput="handleManualHex(this.value)">
+        <div class="section-label">Hex-Code</div>
+        <input type="text" id="hexManual" placeholder="FFFFFF" oninput="handleManualHex(this.value)">
         <button class="btn" onclick="manualToPalette()">MERKEN</button>
       </div>
     </div>
-    
-    <div class="palette">
-      <div id="eraserBtn" class="eraser" onclick="selectEraser()" title="Farbe zurücksetzen [-]">✕</div>
-      <div id="palette" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+
+    <div class="palette-area">
+      <div class="section-label">Merkliste (Rechtsklick: Löschen)</div>
+      <div class="palette" id="palette">
+        <div id="eraserBtn" class="eraser" onclick="selectEraser()" title="Reset [-]">✕</div>
+      </div>
     </div>
 
-    <button class="btn" onclick="insertColorAtCursor()" style="background:#555; margin-left:auto;">CODE EINFÜGEN</button>
+    <div class="format-group">
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <div class="section-label">Format</div>
+            <div style="display:flex; gap:5px;">
+                <button class="btn btn-format" onclick="insertTag('[b]', '[/b]')"><b>B</b></button>
+                <button class="btn btn-format" onclick="insertTag('[i]', '[/i]')"><i>I</i></button>
+                <button class="btn" onclick="resetAll()" style="background:#721c24;">CLR</button>
+            </div>
+        </div>
+    </div>
   </div>
 
-  <div class="label-group">
-    <div class="label-small">1. Code-Eingabe (Farben, [b]fett[/b], [-] Reset)</div>
+  <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:5px;">
+    <span class="section-label">1. Code Eingabe</span>
     <div id="charCount" class="stats ok">0 / 255</div>
   </div>
   <textarea id="codeInput" oninput="handleCodeInput()" placeholder="Text hier rein..."></textarea>
 
-  <div class="label-group">
-    <div class="label-small">2. Pinsel-Editor</div>
-    <button class="btn btn-reset" onclick="resetAllColors()">KOMPLETT-RESET</button>
-  </div>
+  <span class="section-label">2. Pinsel-Vorschau</span>
   <div id="paintArea" class="paint-area"></div>
 
-  <div class="action-bar">
-    <button id="copyBtn" class="btn" style="flex: 1; padding: 15px; background: #28a745; font-size: 1.1em;" onclick="copyResult()">CODE KOPIEREN</button>
-  </div>
+  <button id="copyBtn" class="btn btn-green" style="width: 100%; padding: 15px; font-size: 1.1em;" onclick="copyResult()">CODE KOPIEREN</button>
 </div>
 
 <script>
-const LIMIT = 255; // Aktualisiert auf 255
+const LIMIT = 255;
 const NONE = "NONE";
-let myPalette = JSON.parse(localStorage.getItem('gow_palette_v10')) || [];
-let activeBrush = "#00FFFF";
+
+// Standard-Farben (Gildenbund)
+const DEFAULTS = ['#FF525A', '#FF7900', '#00AAFF'];
+let myPalette = JSON.parse(localStorage.getItem('gow_palette_v14')) || DEFAULTS;
+
+let activeBrush = "#FF7900";
 let wordsData = [];
 
 function selectBrush(hex) {
@@ -110,10 +123,8 @@ function selectEraser() {
 
 function handleManualHex(val) {
     let hex = val.trim();
-    if (hex.length >= 6) {
-        if (!hex.startsWith('#')) hex = '#' + hex;
-        if (/^#[0-9A-F]{6}$/i.test(hex)) selectBrush(hex);
-    }
+    if (hex && !hex.startsWith('#')) hex = '#' + hex;
+    if (/^#[0-9A-F]{6}$/i.test(hex)) selectBrush(hex);
 }
 
 function manualToPalette() {
@@ -122,17 +133,19 @@ function manualToPalette() {
 
 function addColorToPalette(hex) {
     hex = hex.toUpperCase();
-    if(hex === NONE) return;
     if(!myPalette.includes(hex)) {
         myPalette.push(hex);
-        localStorage.setItem('gow_palette_v10', JSON.stringify(myPalette));
+        localStorage.setItem('gow_palette_v14', JSON.stringify(myPalette));
         renderPalette();
     }
 }
 
 function renderPalette() {
     const container = document.getElementById('palette');
+    const eraser = document.getElementById('eraserBtn');
     container.innerHTML = "";
+    container.appendChild(eraser);
+
     myPalette.forEach(col => {
         const tile = document.createElement('div');
         tile.className = "palette-tile" + (activeBrush === col ? " active" : "");
@@ -141,53 +154,43 @@ function renderPalette() {
         tile.oncontextmenu = (e) => {
             e.preventDefault();
             myPalette = myPalette.filter(c => c !== col);
-            localStorage.setItem('gow_palette_v10', JSON.stringify(myPalette));
+            localStorage.setItem('gow_palette_v14', JSON.stringify(myPalette));
             renderPalette();
         };
         container.appendChild(tile);
     });
 }
 
-function insertColorAtCursor() {
-    if(activeBrush === NONE) return;
+function insertTag(open, close) {
     const area = document.getElementById('codeInput');
-    const code = `[${activeBrush.replace('#', '')}]`;
     const start = area.selectionStart;
     const end = area.selectionEnd;
-    area.value = area.value.substring(0, start) + code + area.value.substring(end);
-    area.focus();
-    area.selectionStart = area.selectionEnd = start + code.length;
+    area.value = area.value.substring(0, start) + open + area.value.substring(start, end) + close + area.value.substring(end);
     handleCodeInput();
 }
 
 function handleCodeInput() {
     const input = document.getElementById('codeInput').value;
-    const found = input.match(/\[([0-9A-Fa-f]{6})\]/g);
-    if (found) found.forEach(match => addColorToPalette("#" + match.substring(1, 7)));
-
-    const parts = input.split(/(\[[0-9A-Fa-f]{6}\]|\[b\]|\[\/b\]|\[-\])/g);
-    let currentColor = NONE;
-    let isBold = false;
+    const parts = input.split(/(\[[0-9A-Fa-f]{6}\]|\[b\]|\[\/b\]|\[i\]|\[\/i\]|\[-\])/g);
+    
+    let colorStack = [NONE];
+    let isBold = false, isItalic = false;
     let newWordsData = [];
 
     parts.forEach(part => {
         if (!part) return;
-        
         if (part.startsWith('[') && part.endsWith(']')) {
             if (part === "[b]") isBold = true;
             else if (part === "[/b]") isBold = false;
-            else if (part === "[-]") currentColor = NONE;
-            else if (part.length === 8) currentColor = "#" + part.substring(1, 7).toUpperCase();
+            else if (part === "[i]") isItalic = true;
+            else if (part === "[/i]") isItalic = false;
+            else if (part === "[-]") { if (colorStack.length > 1) colorStack.pop(); }
+            else if (part.length === 8) colorStack.push("#" + part.substring(1, 7).toUpperCase());
         } else {
             const subParts = part.split(/(\s+)/);
             subParts.forEach(word => {
                 if(word) {
-                    newWordsData.push({
-                        text: word,
-                        color: currentColor,
-                        bold: isBold,
-                        isSpace: /^\s+$/.test(word)
-                    });
+                    newWordsData.push({ text: word, color: colorStack[colorStack.length - 1], bold: isBold, italic: isItalic, isSpace: /^\s+$/.test(word) });
                 }
             });
         }
@@ -200,7 +203,6 @@ function handleCodeInput() {
 function renderPaintArea() {
     const container = document.getElementById('paintArea');
     container.innerHTML = "";
-
     wordsData.forEach((item, index) => {
         const span = document.createElement('span');
         span.textContent = item.text;
@@ -208,33 +210,34 @@ function renderPaintArea() {
             span.className = "word-chip";
             span.style.color = (item.color === NONE) ? "inherit" : item.color;
             span.style.fontWeight = item.bold ? "900" : "400";
+            span.style.fontStyle = item.italic ? "italic" : "normal";
             span.onclick = () => {
                 wordsData[index].color = activeBrush;
                 syncBackToCode();
             };
-        } else {
-            span.style.whiteSpace = "pre-wrap";
-        }
+        } else { span.style.whiteSpace = "pre-wrap"; }
         container.appendChild(span);
     });
 }
 
 function syncBackToCode() {
     let newCode = "";
-    let lastColorInCode = NONE;
-    let currentBoldState = false;
+    let colorStack = [NONE];
+    let curB = false, curI = false;
     
     wordsData.forEach(item => {
-        if(item.isSpace) {
-            newCode += item.text;
-        } else {
-            if (item.bold !== currentBoldState) {
-                newCode += item.bold ? "[b]" : "[/b]";
-                currentBoldState = item.bold;
-            }
-            if (item.color !== lastColorInCode) {
-                newCode += (item.color === NONE) ? "[-]" : `[${item.color.replace('#','')}]`;
-                lastColorInCode = item.color;
+        if(item.isSpace) { newCode += item.text; } 
+        else {
+            if (item.bold !== curB) { newCode += item.bold ? "[b]" : "[/b]"; curB = item.bold; }
+            if (item.italic !== curI) { newCode += item.italic ? "[i]" : "[/i]"; curI = item.italic; }
+            let topC = colorStack[colorStack.length - 1];
+            if (item.color !== topC) {
+                if (colorStack.length > 1 && item.color === colorStack[colorStack.length - 2]) {
+                    newCode += "[-]"; colorStack.pop();
+                } else {
+                    newCode += `[${item.color.replace('#','')}]`;
+                    colorStack.push(item.color);
+                }
             }
             newCode += item.text;
         }
@@ -244,13 +247,7 @@ function syncBackToCode() {
     renderPaintArea();
 }
 
-function resetAllColors() {
-    if(confirm("Alle Formatierungen löschen?")) {
-        const area = document.getElementById('codeInput');
-        area.value = area.value.replace(/\[([0-9A-Fa-f]{6})\]|\[b\]|\[\/b\]|\[-\]/g, "");
-        handleCodeInput();
-    }
-}
+function resetAll() { if(confirm("Code löschen?")) { document.getElementById('codeInput').value = ""; handleCodeInput(); } }
 
 function updateCounter() {
     const len = document.getElementById('codeInput').value.length;
@@ -268,12 +265,8 @@ function copyResult() {
     });
 }
 
-function init() {
-    renderPalette();
-    handleCodeInput();
-}
-
-init();
+renderPalette();
+handleCodeInput();
 </script>
 </body>
 </html>
