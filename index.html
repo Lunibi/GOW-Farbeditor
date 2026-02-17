@@ -34,8 +34,7 @@
 
   textarea { width: 100%; height: 140px; margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-family: monospace; font-size: 1.1em; box-sizing: border-box; resize: vertical; outline: none; }
   
-  /* Vorschau Bereich - Hier war die Schriftart auf fett eingestellt */
-  .paint-area { background: #000; padding: 20px; border-radius: 8px; border: 1px solid #333; min-height: 80px; margin-bottom: 20px; font-size: 1.25em; line-height: 1.5; font-weight: normal; /* WICHTIG: Standard auf normal */ }
+  .paint-area { background: #000; padding: 20px; border-radius: 8px; border: 1px solid #333; min-height: 80px; margin-bottom: 20px; font-size: 1.25em; line-height: 1.5; font-weight: normal; }
   .word-chip { cursor: cell; transition: background 0.1s; border-radius: 2px; display: inline; }
   .word-chip:hover { background: rgba(255,255,255,0.1); }
 
@@ -73,7 +72,7 @@
 
   <div class="label-group">
     <div class="label-small">1. Code-Eingabe (Farben, [b]fett[/b], [-] Reset)</div>
-    <div id="charCount" class="stats ok">0 / 243</div>
+    <div id="charCount" class="stats ok">0 / 255</div>
   </div>
   <textarea id="codeInput" oninput="handleCodeInput()" placeholder="Text hier rein..."></textarea>
 
@@ -89,7 +88,7 @@
 </div>
 
 <script>
-const LIMIT = 243;
+const LIMIT = 255; // Aktualisiert auf 255
 const NONE = "NONE";
 let myPalette = JSON.parse(localStorage.getItem('gow_palette_v10')) || [];
 let activeBrush = "#00FFFF";
@@ -208,7 +207,6 @@ function renderPaintArea() {
         if(!item.isSpace) {
             span.className = "word-chip";
             span.style.color = (item.color === NONE) ? "inherit" : item.color;
-            // Hier wird die GOW-Fett-Logik visuell umgesetzt:
             span.style.fontWeight = item.bold ? "900" : "400";
             span.onclick = () => {
                 wordsData[index].color = activeBrush;
